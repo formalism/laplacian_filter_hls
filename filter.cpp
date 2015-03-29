@@ -20,8 +20,8 @@ int lap_filter_axim(hls::stream<ap_int<32> >& in, hls::stream<ap_int<32> >& out)
 #pragma HLS INTERFACE axis port=out
 #pragma HLS INTERFACE s_axilite port=return
 
-	unsigned int y_buf[3][HORIZONTAL_PIXEL_WIDTH];
-#pragma HLS array_partition variable=y_buf block factor=3 dim=1
+	unsigned int y_buf[2][HORIZONTAL_PIXEL_WIDTH];
+#pragma HLS array_partition variable=y_buf block factor=2 dim=1
 #pragma HLS resource variable=y_buf core=RAM_2P
 
 	unsigned int window[3][3];
@@ -43,8 +43,7 @@ int lap_filter_axim(hls::stream<ap_int<32> >& in, hls::stream<ap_int<32> >& out)
 			window[2][2] = y;	// Œ»İ‚Ì“ü—Í
 
 			y_buf[0][i] = y_buf[1][i];	// ‚’¼•ûŒüƒVƒtƒg :-<
-			y_buf[1][i] = y_buf[2][i];
-			y_buf[2][i] = y;
+			y_buf[1][i] = y;
 
 			int val = laplacian_fil(window[0][0], window[0][1], window[0][2],
 									window[1][0], window[1][1], window[1][2],
