@@ -20,37 +20,37 @@ int lap_filter_axim(hls::stream<ap_int<32> >& in, hls::stream<ap_int<32> >& out)
 #pragma HLS INTERFACE axis port=out
 #pragma HLS INTERFACE s_axilite port=return
 
-	unsigned int y_buf[2][HORIZONTAL_PIXEL_WIDTH];
+        unsigned int y_buf[2][HORIZONTAL_PIXEL_WIDTH];
 #pragma HLS array_partition variable=y_buf block factor=2 dim=1
 #pragma HLS resource variable=y_buf core=RAM_2P
 
-	unsigned int window[3][3];
+        unsigned int window[3][3];
 #pragma HLS array_partition variable=window complete
 
     for (int j = 0; j < VERTICAL_PIXEL_WIDTH; j++){
-		for (int i = 0; i < HORIZONTAL_PIXEL_WIDTH; i++){
+                for (int i = 0; i < HORIZONTAL_PIXEL_WIDTH; i++){
 #pragma HLS PIPELINE
-			int y = conv_rgb2y(in.read());
+                        int y = conv_rgb2y(in.read());
 
-			window[0][0] = window[0][1];	// 水平方向シフトレジスタ :-)
-			window[0][1] = window[0][2];
-			window[0][2] = y_buf[0][i];
-			window[1][0] = window[1][1];
-			window[1][1] = window[1][2];
-			window[1][2] = y_buf[1][i];
-			window[2][0] = window[2][1];
-			window[2][1] = window[2][2];
-			window[2][2] = y;	// 現在の入力
+                        window[0][0] = window[0][1];    // 水平方向シフトレジスタ :-)
+                        window[0][1] = window[0][2];
+                        window[0][2] = y_buf[0][i];
+                        window[1][0] = window[1][1];
+                        window[1][1] = window[1][2];
+                        window[1][2] = y_buf[1][i];
+                        window[2][0] = window[2][1];
+                        window[2][1] = window[2][2];
+                        window[2][2] = y;       // 現在の入力
 
-			y_buf[0][i] = y_buf[1][i];	// 垂直方向シフト :-<
-			y_buf[1][i] = y;
+                        y_buf[0][i] = y_buf[1][i];      // 垂直方向シフト :-<
+                        y_buf[1][i] = y;
 
-			int val = laplacian_fil(window[0][0], window[0][1], window[0][2],
-									window[1][0], window[1][1], window[1][2],
-									window[2][0], window[2][1], window[2][2]);
-			if (j >= 2 && i >= 2)	// 無効の部分は出力しないので水平垂直2画素ずつ減る
-				out.write((val<<16)|(val<<8)|val);
-		}
+                        int val = laplacian_fil(window[0][0], window[0][1], window[0][2],
+                                                                        window[1][0], window[1][1], window[1][2],
+                                                                        window[2][0], window[2][1], window[2][2]);
+                        if (j >= 2 && i >= 2)   // 無効の部分は出力しないので水平垂直2画素ずつ減る
+                                out.write((val<<16)|(val<<8)|val);
+                }
     }
 
     return 0;
@@ -62,7 +62,7 @@ int lap_filter_axim(hls::stream<ap_int<32> >& in, hls::stream<ap_int<32> >& out)
 // "YUVフォーマット及び YUV<->RGB変換"を参考にした。http://vision.kuee.kyoto-u.ac.jp/~hiroaki/firewire/yuv.html
 //　2013/09/27 : float を止めて、すべてint にした
 int conv_rgb2y(int rgb){
-	int r,g,b;
+    int r,g,b;
     int y_f;
     int y;
 
