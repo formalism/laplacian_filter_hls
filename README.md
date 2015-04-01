@@ -8,3 +8,5 @@ Result image size is 238x118 pixels (which is output as solution1/csim/build/res
 Original: ![original](image.png)
 
 Output: ![result](result.png)
+
+See also: par2pix branch which is 2 times faster.
