@@ -9,4 +9,6 @@ Original: ![original](image.png)
 
 Output: ![result](result.png)
 
+Dataflow: ![dataflow](dataflow.png) Notice only 2 line buffers are required.
+
 See also: par2pix branch which is 2 times faster.
