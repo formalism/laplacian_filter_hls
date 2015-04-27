@@ -6,52 +6,66 @@
 #include <string.h>
 #include <ap_int.h>
 #include <hls_stream.h>
+#include <ap_axi_sdata.h>
 
 #define HORIZONTAL_PIXEL_WIDTH    240
-#define VERTICAL_PIXEL_WIDTH    120
-#define ALL_PIXEL_VALUE    (HORIZONTAL_PIXEL_WIDTH*VERTICAL_PIXEL_WIDTH)
 
 int laplacian_fil(int x0y0, int x1y0, int x2y0, int x0y1, int x1y1, int x2y1, int x0y2, int x1y2, int x2y2);
 int conv_rgb2y(int rgb);
 
-int lap_filter_axim(hls::stream<ap_int<32> >& in, hls::stream<ap_int<32> >& out)
+int lap_filter_axim(hls::stream<ap_axiu<32,1,1,1> >& in, hls::stream<ap_axiu<32,1,1,1> >& out)
 {
 #pragma HLS INTERFACE axis port=in
 #pragma HLS INTERFACE axis port=out
 #pragma HLS INTERFACE s_axilite port=return
 
-        unsigned int y_buf[2][HORIZONTAL_PIXEL_WIDTH];
+    ap_axiu<32, 1, 1, 1> val;   // input value
+    ap_axiu<32, 1, 1, 1> lap;   // output value
+    int i=0, j=0;
+
+    unsigned int y_buf[2][HORIZONTAL_PIXEL_WIDTH];
 #pragma HLS array_partition variable=y_buf block factor=2 dim=1
 #pragma HLS resource variable=y_buf core=RAM_2P
 
-        unsigned int window[3][3];
+    unsigned int window[3][3];  // filter window
 #pragma HLS array_partition variable=window complete
 
-    for (int j = 0; j < VERTICAL_PIXEL_WIDTH; j++){
-                for (int i = 0; i < HORIZONTAL_PIXEL_WIDTH; i++){
+    do {
+#pragma HLS DEPENDENCE variable=y_buf inter false
 #pragma HLS PIPELINE
-                        int y = conv_rgb2y(in.read());
+#pragma HLS LOOP_TRIPCOUNT min=240*120 max=240*120
+        val = in.read();
+        int y = conv_rgb2y(val.data);
 
-                        window[0][0] = window[0][1];    // 水平方向シフトレジスタ :-)
-                        window[0][1] = window[0][2];
-                        window[0][2] = y_buf[0][i];
-                        window[1][0] = window[1][1];
-                        window[1][1] = window[1][2];
-                        window[1][2] = y_buf[1][i];
-                        window[2][0] = window[2][1];
-                        window[2][1] = window[2][2];
-                        window[2][2] = y;       // 現在の入力
-
-                        y_buf[0][i] = y_buf[1][i];      // 垂直方向シフト :-<
-                        y_buf[1][i] = y;
-
-                        int val = laplacian_fil(window[0][0], window[0][1], window[0][2],
-                                                                        window[1][0], window[1][1], window[1][2],
-                                                                        window[2][0], window[2][1], window[2][2]);
-                        if (j >= 2 && i >= 2)   // 無効の部分は出力しないので水平垂直2画素ずつ減る
-                                out.write((val<<16)|(val<<8)|val);
-                }
-    }
+        window[0][0] = window[0][1];    // 水平方向シフトレジスタ :-)
+        window[0][1] = window[0][2];
+        window[0][2] = y_buf[0][i];
+        window[1][0] = window[1][1];
+        window[1][1] = window[1][2];
+        window[1][2] = y_buf[1][i];
+        window[2][0] = window[2][1];
+        window[2][1] = window[2][2];
+        window[2][2] = y;       // 現在の入力
+        
+        y_buf[0][i] = y_buf[1][i];      // 垂直方向シフト :-<
+        y_buf[1][i] = y;
+        
+        int lapval = laplacian_fil(window[0][0], window[0][1], window[0][2],
+                                   window[1][0], window[1][1], window[1][2],
+                                   window[2][0], window[2][1], window[2][2]);
+        
+        lap.data = (lapval<<16)|(lapval<<8)|lapval;
+        lap.last = val.last;    // copy tlast
+        if (j >= 2 && i >= 2)   // 無効の部分は出力しないので水平垂直2画素ずつ減る
+            out.write(lap);
+        
+        if (val.user){
+            i = 0;
+            j++;
+        }else{
+            i++;
+        }
+    }while (!val.last);
 
     return 0;
 }
